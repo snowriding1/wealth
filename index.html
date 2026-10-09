@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snowriding's Wealth Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
+    body { 
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0f172a; 
+      color: #f8fafc; 
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7); 
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+    .text-gradient { background: linear-gradient(to right, #818cf8, #2dd4bf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .animate-fade-in { animation: fadeIn 0.4s ease-[cubic-bezier(0.34,1.56,0.64,1)] forwards; }
+    @keyframes gradient-xy {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .animate-gradient-xy {
+      animation: gradient-xy 3s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  
+    .chart-container {
+        animation: chartZoomIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        transform-origin: center;
+    }
+    @keyframes chartZoomIn {
+        0% { opacity: 0; transform: scale(0.85) translateY(20px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+  </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+
+  <!-- Ambient Background Glow -->
+  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/20 blur-[150px] rounded-full mix-blend-screen"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-teal-600/20 blur-[150px] rounded-full mix-blend-screen"></div>
+  </div>
+
+  <div class="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+      <div>
+        <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">
+          Snowriding's <span class="text-gradient">Wealth Dashboard</span>
+        </h1>
+        <p class="text-sm text-slate-400">2035년전에 100억 부자가 되실 이혁진님의 자산 및 현금흐름 통합 분석</p>
+      </div>
+      <div class="flex items-center gap-4 w-full md:w-auto">
+        <div class="glass-card px-4 py-2 rounded-xl flex items-center gap-2 border border-teal-400/60 bg-teal-950/40 shadow-[0_0_15px_rgba(45,212,191,0.3)]">
+          <i data-lucide="clock" class="w-4 h-4 text-teal-300 animate-pulse"></i>
+          <span id="realtimeClock" class="text-teal-300 font-extrabold text-xs md:text-sm tracking-wider font-mono drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]">2026-10-09 오전 00:00:00 (KST)</span>
+        </div>
+        <div class="glass-card px-4 py-2 rounded-xl flex items-center gap-2 border border-indigo-500/50 bg-indigo-900/30">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          <span class="text-indigo-100 font-bold text-sm">Real-time Data Synced</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Notice Banner -->
+    <div class="glass-card rounded-2xl p-4 flex items-center justify-center gap-3 mb-8 border border-teal-500/30 bg-teal-900/20 shadow-lg shadow-teal-500/10">
+      <div class="flex items-center justify-center w-8 h-8 rounded-full bg-teal-500/20 text-teal-400">
+        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+      </div>
+      <span class="text-teal-100 font-medium tracking-wide text-sm md:text-base">
+        <strong class="text-white">최신 마감 실적:</strong> 이번 자료는 <strong class="text-teal-400 text-lg">2026년 9월</strong> 현황입니다. (자산 및 수입 실제 데이터 100% 반영)
+      </span>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="flex items-center justify-center gap-4 mb-8">
+      <button onclick="switchTab('asset')" id="btn-asset" class="px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 border border-indigo-500/50">
+        1. 자산 현황
+      </button>
+      <button onclick="switchTab('income')" id="btn-income" class="px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700">
+        2. 수입 현황
+      </button>
+      <button onclick="switchTab('mandalart')" id="btn-mandalart" class="px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700">
+        3. 만다라트 목표
+      </button>
+    </div>
+
+    <!-- ==================== TAB 1: ASSETS ==================== -->
+    <div id="tab-asset" class="space-y-6 block animate-fade-in">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Tot Asset -->
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">총 자산 (Total Assets)</h3>
+            <i data-lucide="landmark" class="w-5 h-5 text-indigo-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valTotAsset">₩0</div>
+          <div class="text-xs font-medium text-emerald-400 flex items-center gap-1">
+            <i data-lucide="trending-up" class="w-3 h-3"></i> <span id="valTotAssetMoM">전월 대비 +0%</span>
+          </div>
+        </div>
+        <!-- Net Asset -->
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl group-hover:bg-teal-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">순자산 (Net Worth)</h3>
+            <i data-lucide="shield-check" class="w-5 h-5 text-teal-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valNetAsset">₩0</div>
+          <div class="text-xs font-medium text-emerald-400 flex items-center gap-1">
+            <i data-lucide="trending-up" class="w-3 h-3"></i> <span id="valNetAssetMoM">전월 대비 +0%</span>
+          </div>
+        </div>
+        <!-- Debt -->
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">총 부채 (Liabilities)</h3>
+            <i data-lucide="credit-card" class="w-5 h-5 text-rose-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valDebt">₩0</div>
+          <div class="text-xs font-medium text-slate-400 flex items-center gap-1" id="valDebtRatio">
+            부채 비율: 0%
+          </div>
+        </div>
+        <!-- Pension -->
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">안전 연금 (Pension)</h3>
+            <i data-lucide="piggy-bank" class="w-5 h-5 text-amber-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valPension">₩0</div>
+          <div class="text-xs font-medium text-slate-400 flex items-center gap-1">
+            은퇴 대비 목적 자금
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-card p-6 rounded-2xl lg:col-span-2 flex flex-col">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-base font-bold text-white">최근 1년 자산 트렌드</h2>
+            <span class="text-xs px-3 py-1 bg-slate-800 rounded-full text-slate-300 border border-slate-700">Monthly</span>
+          </div>
+          <div class="relative w-full h-[300px] chart-container"><canvas id="chartAsset1Y"></canvas></div>
+        </div>
+        
+        <div class="glass-card p-6 rounded-2xl flex flex-col items-center justify-center">
+          <h2 class="text-base font-bold text-white mb-6 w-full text-left">포트폴리오 비중</h2>
+          <div class="relative w-full max-w-[240px] h-[240px]"><canvas id="chartAssetAlloc"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-card p-6 rounded-2xl lg:col-span-1">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-base font-bold text-white">연도별 자산 성장 (기말 기준)</h2>
+          </div>
+          <div class="relative w-full h-[250px] chart-container"><canvas id="chartAssetYearly"></canvas></div>
+        </div>
+
+        <div class="glass-card rounded-2xl lg:col-span-2 flex flex-col overflow-hidden">
+          <div class="p-4 sm:p-6 border-b border-slate-700/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h2 class="text-base font-bold text-white">마감월('26.9) 자산/부채 내역</h2>
+            <div class="flex gap-2 bg-slate-800/50 p-1 rounded-lg">
+              <button onclick="toggleTable('asset')" id="btn-tbl-asset" class="px-4 py-1.5 rounded-md text-sm font-bold bg-indigo-500 text-white shadow transition-all">순자산/총자산 상세</button>
+              <button onclick="toggleTable('debt')" id="btn-tbl-debt" class="px-4 py-1.5 rounded-md text-sm font-bold text-slate-400 hover:text-white transition-all">부채 상세</button>
+            </div>
+          </div>
+          
+          <!-- 자산 테이블 -->
+          <div class="overflow-x-auto h-[250px]" id="tbl-container-asset">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead class="sticky top-0 bg-slate-800/90 backdrop-blur-md text-slate-400 z-10">
+                <tr>
+                  <th class="py-3 px-6 font-semibold">구분</th>
+                  <th class="py-3 px-6 font-semibold">세부 항목</th>
+                  <th class="py-3 px-6 font-semibold text-right">평가금액 (원)</th>
+                  <th class="py-3 px-6 font-semibold text-right">총자산 대비 비중</th>
+                </tr>
+              </thead>
+              <tbody id="assetTableBody" class="divide-y divide-slate-700/50"></tbody>
+            </table>
+          </div>
+
+          <!-- 부채 테이블 -->
+          <div class="overflow-x-auto h-[250px] hidden" id="tbl-container-debt">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead class="sticky top-0 bg-slate-800/90 backdrop-blur-md text-slate-400 z-10">
+                <tr>
+                  <th class="py-3 px-6 font-semibold">구분</th>
+                  <th class="py-3 px-6 font-semibold">세부 항목</th>
+                  <th class="py-3 px-6 font-semibold text-right">대출잔액 (원)</th>
+                  <th class="py-3 px-6 font-semibold text-right">총부채 대비 비중</th>
+                </tr>
+              </thead>
+              <tbody id="debtTableBody" class="divide-y divide-slate-700/50"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: INCOME ==================== -->
+    <div id="tab-income" class="space-y-6 hidden animate-fade-in">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl group-hover:bg-teal-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">당월('26.9) 총수입</h3>
+            <i data-lucide="wallet" class="w-5 h-5 text-teal-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valIncTotal">₩0</div>
+          <div class="text-xs font-medium flex items-center gap-1 text-slate-400">
+            <span id="valIncMoM">전월 대비 데이터 대기중</span>
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">당월 급여 외 수입 (자본소득)</h3>
+            <i data-lucide="rocket" class="w-5 h-5 text-indigo-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valIncNonSalary">₩0</div>
+          <div class="text-xs font-medium text-indigo-300 flex items-center gap-1" id="valIncNonSalaryRatio">
+            지은: ₩0 | 혁진: ₩0
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-fuchsia-500/10 rounded-full blur-2xl group-hover:bg-fuchsia-500/20 transition"></div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">당해 누적 수입 (26년 YTD)</h3>
+            <i data-lucide="bar-chart-3" class="w-5 h-5 text-fuchsia-400"></i>
+          </div>
+          <div class="text-3xl font-extrabold text-white mb-2" id="valIncYTD">₩0</div>
+          <div class="text-xs font-medium text-slate-400 flex items-center gap-1">
+            올해 누적 달성액
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-card p-6 rounded-2xl flex flex-col">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2 class="text-base font-bold text-white">최근 1년 수입 구조 트렌드</h2>
+              <p class="text-xs text-slate-400 mt-1">근로소득 vs 급여 외 소득 비교 (월별)</p>
+            </div>
+          </div>
+          <div class="relative w-full h-[320px] chart-container"><canvas id="chartInc1Y"></canvas></div>
+        </div>
+        
+        <div class="glass-card p-6 rounded-2xl flex flex-col">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2 class="text-base font-bold text-white">연도별 장기 수입 트렌드</h2>
+              <p class="text-xs text-slate-400 mt-1">월 1억 벌기 프로젝트 누적 지표</p>
+            </div>
+          </div>
+          <div class="relative w-full h-[320px] chart-container"><canvas id="chartIncYearly"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- ==================== TAB 3: MANDALART ==================== -->
+    <div id="tab-mandalart" class="space-y-6 hidden animate-fade-in">
+      <div class="glass-card p-6 rounded-3xl flex flex-col items-center">
+
+
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 w-full gap-4">
+          <div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-white flex items-center gap-3">
+              <div class="p-2 bg-rose-500/20 rounded-lg border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.3)]">
+                <i data-lucide="flame" class="w-6 h-6 text-rose-500"></i>
+              </div>
+              핵심 목표 & 실천 시스템 (Mandalart)
+            </h2>
+            <p class="text-sm text-slate-400 mt-2">"월 1억 달성, 4트리거 2회, 연 5억 달성!!"을 향한 흔들림 없는 루틴</p>
+          </div>
+          <div class="px-5 py-2.5 bg-gradient-to-r from-rose-500/10 to-orange-500/10 border border-rose-500/30 rounded-xl shadow-[0_0_15px_rgba(244,63,94,0.15)]">
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 font-bold text-sm tracking-wider">MINDSET & MOTIVATION</span>
+          </div>
+        </div>
+        
+        <!-- Modern Mandalart HTML Table Grid -->
+        <div class="w-full overflow-x-auto pb-8 pt-4 px-2">
+          <div class="min-w-[950px] max-w-[1100px] mx-auto grid grid-cols-3 gap-3 md:gap-4 p-4 md:p-5 rounded-[2rem] bg-slate-900/60 border border-slate-700/50 shadow-2xl backdrop-blur-xl">
+            
+            <!-- Block 1: 신체/수면 시스템 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-blue-900/10 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-top-left hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(59,130,246,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(일) 러닝 매일 평일 2km 이상, 휴일 5km 이상</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(주) 근육운동 주 3회 ↑<br>(계단오르기27Fx3)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(주) 토요일/일요일 사우나 가기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(일) 지하철타면 종착지 알람<br>(Energy Save)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(59,130,246,0.4)] border border-blue-400/30">신체/수면 시스템</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(일) 평일 매일 도라지청 먹기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(일) 기상하면 러닝복 착용</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(월) 12시가 다 되어도 잠이 안오면 멜라토닌</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-blue-950/40 border border-blue-500/10 text-blue-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-blue-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300">(일) 자러 들어가면 휴대폰 보지 않기</div>
+            </div>
+
+            <!-- Block 2: 수익 시스템 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-emerald-900/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-top hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(16,185,129,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(일) 매일 전날 미국 주식시황 분석</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(일) 매일 공모주 일정 체크</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(월) 4트리거 등 투자원칙을 글로 쓰고, 밸런싱</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(일) 투자 원칙 어기지 않기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400/30">수익 시스템</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(일) 4트리거 성공 확신 생각하기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(주) 20년 후 자녀계좌 관리</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(일) 나는 결국 성공한다고 생각하기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 text-emerald-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-emerald-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300">(월) 월 1회 수입 및 자산 점검</div>
+            </div>
+
+            <!-- Block 3: 지식 시스템 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-sky-900/10 border border-sky-500/20 shadow-[0_0_15px_rgba(14,165,233,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-top-right hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(14,165,233,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(일) 자기전에 책보기 20분 이상</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(주) 토요일 책 읽기 3시간 ↑<br>(아크앤북 등)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(주) 책 읽으면 독서 기록 → 실천내용 포함</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(주) 읽은 책 내용 중 한 가지 실천해보기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(14,165,233,0.4)] border border-sky-400/30">지식 시스템</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(주) 용인시 독서마라톤 완주하기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(월) 월간 '독서 결산' 달성률 시각화하기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(주) 키요사키 책 10권 읽기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-sky-950/40 border border-sky-500/10 text-sky-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-sky-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all duration-300">(주) 매주 토요일 독서희망목록 재정리</div>
+            </div>
+
+            <!-- Block 4: 관계 시스템 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-indigo-900/10 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-left hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(99,102,241,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(일) 아내와 다퉈도 먼저 이야기하기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(일) 아내에게 매일 문자 보내기<br>(공모주 등)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(주) 일요일 예준과 조깅 3km</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(주) 처가가 먼저<br>(아내와의 관계를 위해)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(99,102,241,0.4)] border border-indigo-400/30">관계 시스템</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(주) 주말 부모님 찾아뵙기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(주) 친구들과 주말에 통화나 만나기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(주) 토/일 설겆이는 내 몫</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 text-indigo-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-indigo-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all duration-300">(주) 일요일 장인 장모님 통화하기</div>
+            </div>
+
+            <!-- Block 5: CORE GOALS (Center) -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-slate-800/60 border border-rose-500/40 shadow-[0_0_30px_rgba(244,63,94,0.15)] relative transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-center hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(244,63,94,0.8)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="absolute inset-0 bg-gradient-to-br from-rose-500/5 via-transparent to-orange-500/5 rounded-2xl pointer-events-none animate-gradient-xy"></div>
+              
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">몸과 정신의 건강</div>
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">투자로 월 1억/<br>연 4억 달성</div>
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">책 50권<br>(키요사키 10권)</div>
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">행복한 가정</div>
+              
+              <!-- ABSOLUTE CORE -->
+              <div class="flex flex-col items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-orange-500 text-white text-sm md:text-base font-extrabold leading-tight shadow-[0_0_20px_rgba(244,63,94,0.6)] border border-white/20 animate-gradient-xy relative overflow-hidden group cursor-default">
+                <div class="absolute inset-0 bg-white/10 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></div>
+                <span class="relative z-10 block mb-1 drop-shadow-md">"월 1억"</span>
+                <span class="relative z-10 block mb-1 text-rose-100 drop-shadow-md">"4트리거 x 2회"</span>
+                <span class="relative z-10 block text-yellow-200 drop-shadow-md">"연 5억 달성!!"</span>
+              </div>
+              
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">5년 내 은퇴 준비</div>
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">자신있는 나 만들기</div>
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">존경받는 리더십 시스템</div>
+              <div class="relative z-10 flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-orange-400/30 text-white text-xs font-bold leading-snug break-keep hover:scale-105 hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300">1등 팀의 실무 자동화</div>
+            </div>
+
+            <!-- Block 6: 자산 최적화 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-violet-900/10 border border-violet-500/20 shadow-[0_0_15px_rgba(139,92,246,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-right hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(139,92,246,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(주) 매주 토요일 연금/IRP계좌 수익률 점검</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(주) 매주 토요일 은퇴 제미나이와 대화</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(주) 매주 1회 손상기 대표와 통화</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(월) 은퇴 D-day를 매월 확인해보기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(139,92,246,0.4)] border border-violet-400/30">자산 최적화</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(주) 매주 토요일 책 집필 : 1시간</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(월) 법인 '비용처리' 항목 리스트업 (차량 등)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(월) 마지막주 토요일, 은퇴 후 '하루 일과표'</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-violet-950/40 border border-violet-500/10 text-violet-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-violet-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300">(월) 은퇴 관련 책 1권이상 읽기</div>
+            </div>
+
+            <!-- Block 7: 자존감 시스템 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-teal-900/10 border border-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-left hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(20,184,166,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(일) 일어나자마자 침구 정리</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(일) 일어나면 "오늘도 좋은 하루" 외치기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(일) 항상 나의 자존감을 생각하며 생활</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(일) 매일 비타민이나 영양제 챙겨 먹기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(20,184,166,0.4)] border border-teal-400/30">자존감 시스템</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(일) 매일 거울보며 나에게 칭찬 한마디 하기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(월) 문요한 작가 1권 이상 읽기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(일) 부정적인 언어 사용하지 않기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-teal-950/40 border border-teal-500/10 text-teal-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-teal-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300">(주) 주 1회 나를 위한 선물 또는 보상</div>
+            </div>
+
+            <!-- Block 8: 리더의 역할/관계 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-cyan-900/10 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(6,182,212,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(주) 팀원 1명과 주 1회 1:1 점심 미팅 진행</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(주) 팀원들에게 주 1회 간식 사주기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(주) 매주 1회 팀 전체 점심 또는 회식 주관</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(월) 손상무님과 격월 1:1 개별 점심</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-400/30">리더의 역할/관계</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(주) 팀원 기념일 직접 챙기기</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(월) 매월 마지막주 월요일 실적서 작성/리뷰</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(주) 다른 담당 팀장/상무와 주 1회 점심</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/10 text-cyan-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-cyan-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300">(주) 칭찬(포상)은 일상에서, 지적은 1:1로</div>
+            </div>
+
+            <!-- Block 9: 팀 활동/성과 시스템 -->
+            <div class="group mandalart-block grid grid-cols-3 gap-1.5 md:gap-2 p-2 rounded-2xl glass-card bg-fuchsia-900/10 border border-fuchsia-500/20 shadow-[0_0_15px_rgba(217,70,239,0.05)] transition-transform duration-[500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right hover:scale-[1.5] hover:z-50 hover:shadow-[0_20px_50px_rgba(217,70,239,0.6)] hover:bg-slate-800/85 cursor-pointer">
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(주) 일요일에 차주 업무 계획 미리 정리</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(주) 매주 금요일 차주 보고 내용 정리</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(일) 회의 전 내용 숙지 및 질문 리스트 작성</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(월) KPI외 과정 지표 월 1회 보고 체계 운영</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-gradient-to-br from-fuchsia-500 to-fuchsia-700 text-white text-xs md:text-sm font-bold leading-snug break-keep shadow-[0_0_15px_rgba(217,70,239,0.4)] border border-fuchsia-400/30">팀 활동/성과 시스템</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(일) 하루의 이메일은 모두 그 날 안에 소화</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(일) 업무할 때 25분 일하고 휴식 (뽀모도로)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(주) 현장 방문 실시 (주 1회)</div>
+              <div class="flex items-center justify-center text-center p-2 rounded-xl bg-fuchsia-950/40 border border-fuchsia-500/10 text-fuchsia-100 text-[11px] md:text-xs font-medium leading-snug break-keep hover:scale-105 hover:bg-fuchsia-800/60 hover:z-10 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all duration-300">(주) 현장 직원과 통화<br>(S오더·KTS·전담센터)</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+    
+    // Chart.js 커스텀 애니메이션 옵션 (피아노 건반 막대 & 파도타기 선 그래프)
+    Chart.defaults.animation = {
+      duration: 2200,
+      easing: 'easeOutElastic',
+      from: function(context) {
+        if (context.type === 'data' && context.mode === 'default') {
+          if (context.chart.config.type === 'bar') {
+            return 0;
+          }
+        }
+        return NaN;
+      },
+      delay: function(context) {
+        let delay = 0;
+        if (context.type === 'data' && context.mode === 'default') {
+          // 막대와 선 그래프 요소들이 순차적으로 출렁이도록 딜레이 부여
+          delay = context.dataIndex * 100 + context.datasetIndex * 150;
+        }
+        return delay;
+      }
+    };
+
+    
+    
+    
+    
+    
+    
+    
+    // 각 차트별 최신 유행 인포그래픽 맞춤형 역동적 애니메이션 설정
+    Chart.defaults.animation = {
+      duration: 3000,
+      easing: 'easeOutElastic', // 전체적으로 화려하게 튀어 오르는 탄성 이징
+      from: function(context) {
+        if (context.type === 'data' && context.mode === 'default') {
+          // 1. 막대그래프 (Bar): 0에서 시작해 쑤욱 커지며 통통 튀는 바운스
+          if (context.chart.config.type === 'bar') {
+            return 0;
+          }
+          // 2. 선형그래프 (Line): 파도처럼 일렁이며 부드럽게 안착
+          if (context.chart.config.type === 'line') {
+            const yScale = context.chart.scales.y;
+            if(yScale) {
+              return yScale.getValueForPixel(yScale.bottom);
+            }
+            return 0;
+          }
+          // 3. 도넛 (Doughnut/Pie) 인포그래픽: 0%에서 부채꼴로 회전하며 화려하게 확장
+          if (context.chart.config.type === 'doughnut') {
+            return 0;
+          }
+        }
+        return NaN;
+      },
+      delay: function(context) {
+        let delay = 0;
+        if (context.type === 'data' && context.mode === 'default') {
+          // 데이터 포인트마다 릴레이처럼 순차적으로 터지듯 등장하는 모션 그래픽 딜레이
+          delay = context.dataIndex * 150 + context.datasetIndex * 250;
+        }
+        return delay;
+      }
+    };
+
+
+    // 공통 호버 플러그인 또는 옵션 추가 (마우스 오버 시 테두리 형광 네온 글로우)
+    Chart.defaults.plugins.tooltip.enabled = true;
+
+
+
+
+
+
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.font.family = "'Pretendard', sans-serif";
+    const gridOptions = { color: 'rgba(255,255,255,0.05)', tickLength: 0 };
+    
+    // Inject REAL DATA extracted via python
+    const data = {
+      asset: {
+        tot: 3512199966.0, net: 2425750930.0, debt: 1086449036.0, pension: 219880560.0,
+        tot_mom_pct: 7.834704031347149,
+        net_mom_pct: 11.844154841681373,
+        debt_ratio: 30.933575722265694,
+        labels_1y: ['25-10', '25-11', '25-12', '26-01', '26-02', '26-03', '26-04', '26-05', '26-06', '26-07', '26-08', '26-09'], tot_1y: [2896913721.0, 2919464716.0, 2931768959.0, 3263533773.0, 3363859732.0, 3295677350.0, 3417914149.0, 3480512647.0, 3451344478.0, 3231089249.0, 3257021937.0, 3512199966.0], net_1y: [1797894434.0, 1822096486.0, 1834400729.0, 2166995129.0, 2268988420.0, 2200806038.0, 2323880600.0, 2387319605.0, 2360651436.0, 2142934280.0, 2168866968.0, 2425750930.0],
+        labels_yr: ['2020', '2020', '2021', '2022', '2023', '2024', '2025', '2026'], tot_yr: [1461200000.0, 1464300000.0, 1703300000.0, 1913300000.0, 1805669114.0, 2747720909.0, 2931768959.0, 3512199966.0], net_yr: [1195900000.0, 1199000000.0, 1361000000.0, 1431000000.0, 1547669114.0, 1639120909.0, 1834400729.0, 2425750930.0],
+        alloc: {"\ud604\uae08\uc790\uc0b0": 11992889.0, "\uae30\ud0c0": 1522158653.0, "\ud22c\uc790\uc790\uc0b0": 1179897460.0, "\ubd80\ub3d9\uc0b0": 1680000000.0, "\uc5f0\uae08\uc790\uc0b0": 219880560.0}, details: [{"cat": "\ud604\uae08\uc790\uc0b0", "name": "\ud604\uae08\uc790\uc0b0 / \uc608\uae08 / \uc9c0\uc740", "val": 11992889.0}, {"cat": "\uae30\ud0c0", "name": "\ud601\uc9c4", "val": 9834937.0}, {"cat": "\ud22c\uc790\uc790\uc0b0", "name": "\ud22c\uc790\uc790\uc0b0 / \uc8fc\uc2dd / \uc9c0\uc740", "val": 1081085694.0}, {"cat": "\uae30\ud0c0", "name": "\ud601\uc9c4", "val": 480874680.0}, {"cat": "\ud22c\uc790\uc790\uc0b0", "name": "KT", "val": 34704000.0}, {"cat": "\ud22c\uc790\uc790\uc0b0", "name": "\uac00\uc0c1\ud654\ud3d0", "val": 9107766.0}, {"cat": "\ubd80\ub3d9\uc0b0", "name": "\uc6a9\uc778\ud50c\ub7ab\ud3fc\uc2dc\ud2f0", "val": 1580000000.0}, {"cat": "\ubd80\ub3d9\uc0b0", "name": "\uc774\ucc9c \uc124\uc131\uba74 \ub18d\uc9c0", "val": 100000000.0}, {"cat": "\uae30\ud0c0", "name": "\uc8fc\ud0dd\ub2f4\ubcf4\ub300\ucd9c 3.9%", "val": 881849036.0}, {"cat": "\uae30\ud0c0", "name": "\uc2e0\ud55c\ub9c8\ud1b5 6%", "val": 50000000.0}, {"cat": "\uae30\ud0c0", "name": "\ucf00\ubc45\ub9c8\ud1b5 6%", "val": 2500000.0}, {"cat": "\uae30\ud0c0", "name": "\uce74\ubc45\ub9c8\ud1b5 6%", "val": 22100000.0}, {"cat": "\uae30\ud0c0", "name": "\ubcf4\ud5d8\ub2f4\ubcf4(\ud601) 3.5%", "val": 20000000.0}, {"cat": "\ud22c\uc790\uc790\uc0b0", "name": "\uc8fc\uc2dd\ub2f4\ubcf4(\ud601)", "val": 5000000.0}, {"cat": "\uae30\ud0c0", "name": "\ubcf4\ud5d8\ub2f4\ubcf4(\uc98c) 4%", "val": 55000000.0}, {"cat": "\ud22c\uc790\uc790\uc0b0", "name": "\uc8fc\uc2dd\ub2f4\ubcf4\ub300\ucd9c(\uc98c) 6%", "val": 50000000.0}, {"cat": "\uc5f0\uae08\uc790\uc0b0", "name": "\uc5f0\uae08DC", "val": 219880560.0}]
+      },
+      income: {
+        tot: 29264210.0, non_sal: 18116000.0, ytd: 492502530.0,
+        tot_mom_pct: 27.8546790658252,
+        non_sal_ratio: 61.90496856057279,
+        labels_1y: ['25.10', '25.11', '25.12', '26.1', '26.2', '26.3', '26.4', '26.5', '26.6', '26.7', '26.8', '26.9'], sal_1y: [6710588.0, 14462640.0, 7794754.0, 6485260.0, 14149980.0, 7609340.0, 6339860.0, 8657470.0, 5724830.0, 9032930.0, 7415650.0, 11148210.0], non_sal_1y: [18888000.0, 11552000.0, 15170000.0, 54292000.0, 56384000.0, 21718000.0, 51569000.0, 96887000.0, 87020000.0, 14480000.0, 15473000.0, 18116000.0], jieun_1y: [11080000.0, 5500000.0, 6500000.0, 48500000.0, 49600000.0, 10400000.0, 26000000.0, 80170000.0, 67000000.0, 2000000.0, 11000000.0, 8320000.0], hyuk_1y: [7808000.0, 6052000.0, 8670000.0, 5792000.0, 6784000.0, 11318000.0, 25569000.0, 16717000.0, 20020000.0, 12480000.0, 4473000.0, 9796000.0],
+        labels_yr: ['2021', '2022', '2023', '2024', '2025', '2026'], sal_yr: [76092690.0, 89143110.0, 101234666.0, 94106236.0, 113000982.0, 76563530.0], non_sal_yr: [79955000.0, 64413758.0, 68091000.0, 119764100.0, 177001000.0, 415939000.0], jieun_yr: [41120000.0, 22050000.0, 18900000.0, 59340000.0, 88330000.0, 302990000.0], hyuk_yr: [38835000.0, 42363758.0, 49191000.0, 60424100.0, 88671000.0, 112949000.0]
+      }
+    };
+
+    
+    function animateCounter(element, target, duration, formatter, isPercent = false) {
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // easeOutExpo 이펙트
+        const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        const current = target * easeOut;
+        
+        if (isPercent) {
+           element.innerText = (target >= 0 ? '+' : '') + current.toFixed(1) + '%';
+        } else if (formatter) {
+           element.innerText = formatter(current);
+        } else {
+           element.innerText = current.toFixed(1) + '%';
+        }
+        
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        } else {
+          if (isPercent) {
+             element.innerText = (target >= 0 ? '+' : '') + target.toFixed(1) + '%';
+          } else if (formatter) {
+             element.innerText = formatter(target);
+          } else {
+             element.innerText = target.toFixed(1) + '%';
+          }
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+    
+    
+    function triggerMandalartAnimations() {
+      const mandalartTab = document.getElementById('tab-mandalart');
+      if (!mandalartTab) return;
+      
+      const blocks = mandalartTab.querySelectorAll('.mandalart-block');
+      if (blocks.length >= 9) {
+        // 1. 가운데 목표 (Index 4) - 크게 줌인 후 제자리
+        const centerBlock = blocks[4];
+        centerBlock.style.transition = 'transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 1.2s ease';
+        centerBlock.style.transform = 'scale(1.35)';
+        centerBlock.style.zIndex = '100';
+        centerBlock.style.boxShadow = '0 0 50px rgba(244, 63, 94, 0.8)';
+        
+        setTimeout(() => {
+          centerBlock.style.transform = 'scale(1)';
+          centerBlock.style.zIndex = '1';
+          centerBlock.style.boxShadow = '0 0 30px rgba(244, 63, 94, 0.15)';
+        }, 1300);
+
+        // 2. 가장자리 8개 목표 - 순차적으로 반짝였다가 사라지는 효과 (Flash & Pulse)
+        blocks.forEach((blk, idx) => {
+          if (idx !== 4) {
+            blk.style.transition = 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            blk.style.transform = 'scale(1.08)';
+            blk.style.filter = 'brightness(1.4)';
+            blk.style.boxShadow = '0 0 35px rgba(255, 255, 255, 0.6)';
+            
+            setTimeout(() => {
+              blk.style.transform = 'scale(1)';
+              blk.style.filter = 'brightness(1)';
+              blk.style.boxShadow = '';
+            }, 800 + (idx * 60));
+          }
+        });
+      }
+    }
+
+    
+      // Asset Charts Render Function
+      function renderAssetCharts() {
+        const c1 = Chart.getChart("chartAsset1Y"); if(c1) c1.destroy();
+        const c2 = Chart.getChart("chartAssetAlloc"); if(c2) c2.destroy();
+        const c3 = Chart.getChart("chartAssetYearly"); if(c3) c3.destroy();
+
+        const ctxAsset1Y = document.getElementById('chartAsset1Y').getContext('2d');
+        let gTot = ctxAsset1Y.createLinearGradient(0,0,0,300); gTot.addColorStop(0, 'rgba(99, 102, 241, 0.4)'); gTot.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        let gNet = ctxAsset1Y.createLinearGradient(0,0,0,300); gNet.addColorStop(0, 'rgba(45, 212, 191, 0.4)'); gNet.addColorStop(1, 'rgba(45, 212, 191, 0)');
+        
+        new Chart(ctxAsset1Y, {
+          type: 'line', data: { labels: data.asset.labels_1y, datasets: [
+            { label: '총자산', data: data.asset.tot_1y, borderColor: '#818cf8', backgroundColor: gTot, borderWidth: 3, tension: 0.4, fill: true, pointRadius: 0, pointHitRadius: 20 },
+            { label: '순자산', data: data.asset.net_1y, borderColor: '#2dd4bf', backgroundColor: gNet, borderWidth: 3, tension: 0.4, fill: true, pointRadius: 0, pointHitRadius: 20 }
+          ]},
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + formatShrink(c.raw) } }, legend: { position: 'top', align: 'end' } },
+            scales: { y: { grid: gridOptions, ticks: { callback: v => formatShrink(v) } }, x: { grid: {display: false} } } }
+        });
+
+        new Chart(document.getElementById('chartAssetAlloc'), {
+          type: 'doughnut', data: { labels: Object.keys(data.asset.alloc), datasets: [{
+            data: Object.values(data.asset.alloc), backgroundColor: ['#6366f1', '#2dd4bf', '#f43f5e', '#f59e0b', '#a855f7'], borderWidth: 0, hoverOffset: 10
+          }]},
+          options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: {color: '#cbd5e1', padding: 15, usePointStyle: true, pointStyle: 'circle'} } } }
+        });
+
+        new Chart(document.getElementById('chartAssetYearly'), {
+          type: 'bar', data: { labels: data.asset.labels_yr, datasets: [
+            { label: '총자산', data: data.asset.tot_yr, backgroundColor: '#4f46e5', borderRadius: 4, hoverBorderColor: '#38bdf8', hoverBorderWidth: 3 },
+            { label: '순자산', data: data.asset.net_yr, backgroundColor: '#0d9488', borderRadius: 4, hoverBorderColor: '#2dd4bf', hoverBorderWidth: 3 }
+          ]},
+          options: { responsive: true, maintainAspectRatio: false,
+            plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + formatShrink(c.raw) } } },
+            scales: { y: { grid: gridOptions, ticks: { callback: v => formatShrink(v) } }, x: { grid: {display: false} } } }
+        });
+      }
+
+      // Income Charts Render Function
+      function renderIncomeCharts() {
+        const c4 = Chart.getChart("chartInc1Y"); if(c4) c4.destroy();
+        const c5 = Chart.getChart("chartIncYearly"); if(c5) c5.destroy();
+
+        new Chart(document.getElementById('chartInc1Y'), {
+          type: 'bar', data: { labels: data.income.labels_1y, datasets: [
+            { label: '근로소득', data: data.income.sal_1y, backgroundColor: 'rgba(99, 102, 241, 0.8)', borderRadius: {bottomLeft: 6, bottomRight: 6} },
+            { label: '급여외수익(지은)', data: data.income.jieun_1y, backgroundColor: 'rgba(244, 63, 94, 0.8)' },
+            { label: '급여외수익(혁진)', data: data.income.hyuk_1y, backgroundColor: 'rgba(217, 70, 239, 0.8)', borderRadius: {topLeft: 6, topRight: 6} }
+          ]},
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + formatShrink(c.raw) } } },
+            scales: { x: { stacked: true, grid: {display: false} }, y: { stacked: true, grid: gridOptions, ticks: { callback: v => formatShrink(v) } } } }
+        });
+
+        new Chart(document.getElementById('chartIncYearly'), {
+          type: 'bar', data: { labels: data.income.labels_yr, datasets: [
+            { label: '근로소득', data: data.income.sal_yr, backgroundColor: 'rgba(99, 102, 241, 0.6)', borderRadius: {bottomLeft: 6, bottomRight: 6} },
+            { label: '급여외수익(지은)', data: data.income.jieun_yr, backgroundColor: 'rgba(244, 63, 94, 0.8)' },
+            { label: '급여외수익(혁진)', data: data.income.hyuk_yr, backgroundColor: 'rgba(217, 70, 239, 0.9)', borderRadius: {topLeft: 6, topRight: 6} }
+          ]},
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + formatShrink(c.raw) } } },
+            scales: { x: { stacked: true, grid: {display: false} }, y: { stacked: true, grid: gridOptions, ticks: { callback: v => formatShrink(v) } } } }
+        });
+      }
+
+    function formatKRW(val) { return '₩' + Math.round(val).toLocaleString('ko-KR'); }
+    function formatShrink(val) {
+      if(val >= 100000000) return (val/100000000).toFixed(1) + '억';
+      if(val >= 10000000) return (val/10000000).toFixed(1) + '천만';
+      return formatKRW(val);
+    }
+
+    
+    function toggleTable(type) {
+      document.getElementById('tbl-container-asset').classList.add('hidden');
+      document.getElementById('tbl-container-debt').classList.add('hidden');
+      document.getElementById('btn-tbl-asset').className = 'px-4 py-1.5 rounded-md text-sm font-bold text-slate-400 hover:text-white transition-all';
+      document.getElementById('btn-tbl-debt').className = 'px-4 py-1.5 rounded-md text-sm font-bold text-slate-400 hover:text-white transition-all';
+      
+      document.getElementById('tbl-container-' + type).classList.remove('hidden');
+      let activeColor = type === 'asset' ? 'bg-indigo-500' : 'bg-rose-600';
+      document.getElementById('btn-tbl-' + type).className = `px-4 py-1.5 rounded-md text-sm font-bold ${activeColor} text-white shadow transition-all`;
+    }
+
+    function switchTab(tabId) {
+      document.getElementById('tab-asset').classList.add('hidden');
+      document.getElementById('tab-income').classList.add('hidden');
+      document.getElementById('tab-mandalart').classList.add('hidden');
+      
+      // 탭 전환 시 차트 인포그래픽 애니메이션 재동작을 위한 재구축
+      if (tabId === 'asset') {
+        // 숫자와 그래프가 완벽히 동시에 작동하도록 렌더링 함수와 카운터를 동시 호출
+        renderAssetCharts();
+        animateCounter(document.getElementById('valTotAsset'), data.asset.tot, 2500, formatKRW);
+        animateCounter(document.getElementById('valNetAsset'), data.asset.net, 2500, formatKRW);
+        animateCounter(document.getElementById('valDebt'), data.asset.debt, 2500, formatKRW);
+        animateCounter(document.getElementById('valPension'), data.asset.pension, 2500, formatKRW);
+      } else if (tabId === 'income') {
+        renderIncomeCharts();
+        animateCounter(document.getElementById('valIncTotal'), data.income.tot, 2500, formatKRW);
+        animateCounter(document.getElementById('valIncNonSalary'), data.income.non_sal, 2500, formatKRW);
+        animateCounter(document.getElementById('valIncYTD'), data.income.ytd, 2500, formatKRW);
+        animateCounter(document.getElementById('animJieun'), data.income.jieun_1y[11], 2500, formatKRW);
+        animateCounter(document.getElementById('animHyuk'), data.income.hyuk_1y[11], 2500, formatKRW);
+      } else if (tabId === 'mandalart') {
+        triggerMandalartAnimations();
+      }
+      const btnBase = "px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 border".split(" ");
+      const btnActive = "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 border-indigo-500/50".split(" ");
+      const btnInactive = "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border-slate-700".split(" ");
+      ['asset', 'income', 'mandalart'].forEach(t => {
+        const btn = document.getElementById('btn-' + t);
+        btn.className = ''; btn.classList.add(...btnBase);
+        if(t === tabId) { btn.classList.add(...btnActive); document.getElementById('tab-' + t).classList.remove('hidden'); } 
+        else { btn.classList.add(...btnInactive); }
+      });
+    }
+
+    function renderUI() {
+      // KPIs - Asset
+      animateCounter(document.getElementById('valTotAsset'), data.asset.tot, 2000, formatKRW);
+      animateCounter(document.getElementById('valNetAsset'), data.asset.net, 2000, formatKRW);
+      animateCounter(document.getElementById('valDebt'), data.asset.debt, 2000, formatKRW);
+      animateCounter(document.getElementById('valPension'), data.asset.pension, 2000, formatKRW);
+      
+      const totMom = data.asset.tot_mom_pct;
+      document.getElementById('valTotAssetMoM').innerHTML = `<i data-lucide="trending-${totMom>=0?'up':'down'}" class="w-3 h-3"></i> 전월 대비 <span id="animTotMom">0%</span>`;
+      animateCounter(document.getElementById('animTotMom'), totMom, 2000, null, true);
+      document.getElementById('valTotAssetMoM').className = `text-xs font-medium flex items-center gap-1 ${totMom>=0?'text-emerald-400':'text-rose-400'}`;
+      
+      const netMom = data.asset.net_mom_pct;
+      document.getElementById('valNetAssetMoM').innerHTML = `<i data-lucide="trending-${netMom>=0?'up':'down'}" class="w-3 h-3"></i> 전월 대비 <span id="animNetMom">0%</span>`;
+      animateCounter(document.getElementById('animNetMom'), netMom, 2000, null, true);
+      document.getElementById('valNetAssetMoM').className = `text-xs font-medium flex items-center gap-1 ${netMom>=0?'text-emerald-400':'text-rose-400'}`;
+      
+      document.getElementById('valDebtRatio').innerHTML = `부채 비율: <span id="animDebtRatio">0%</span>`;
+      animateCounter(document.getElementById('animDebtRatio'), data.asset.debt_ratio, 2000, null, false);
+
+      // KPIs - Income
+      animateCounter(document.getElementById('valIncTotal'), data.income.tot, 2000, formatKRW);
+      animateCounter(document.getElementById('valIncNonSalary'), data.income.non_sal, 2000, formatKRW);
+      animateCounter(document.getElementById('valIncYTD'), data.income.ytd, 2000, formatKRW);
+      
+      const incMom = data.income.tot_mom_pct;
+      document.getElementById('valIncMoM').innerHTML = `<i data-lucide="trending-${incMom>=0?'up':'down'}" class="w-3 h-3"></i> 전월 대비 <span id="animIncMom">0%</span>`;
+      animateCounter(document.getElementById('animIncMom'), incMom, 2000, null, true);
+      document.getElementById('valIncMoM').className = `text-xs font-medium flex items-center gap-1 ${incMom>=0?'text-emerald-400':'text-rose-400'}`;
+      
+      document.getElementById('valIncNonSalaryRatio').innerHTML = `지은: <span id="animJieun">₩0</span> <span class='mx-1'>|</span> 혁진: <span id="animHyuk">₩0</span>`;
+      animateCounter(document.getElementById('animJieun'), data.income.jieun_1y[11], 2000, formatKRW);
+      animateCounter(document.getElementById('animHyuk'), data.income.hyuk_1y[11], 2000, formatKRW);
+      
+      lucide.createIcons();
+
+renderAssetCharts();
+      renderIncomeCharts();
+
+      // Table
+      const assetTbody = document.getElementById('assetTableBody');
+      const debtTbody = document.getElementById('debtTableBody');
+      assetTbody.innerHTML = '';
+      debtTbody.innerHTML = '';
+      
+      const debtKeywords = ['담보', '마통', '대출', '카드론'];
+      let assetItems = [];
+      let debtItems = [];
+      
+      data.asset.details.forEach(item => {
+        let isDebt = debtKeywords.some(k => item.name.includes(k));
+        if(isDebt) {
+          debtItems.push(item);
+        } else {
+          assetItems.push(item);
+        }
+      });
+      
+      assetItems.sort((a,b) => b.val - a.val).forEach(item => {
+        let pct = (item.val/data.asset.tot*100);
+        let tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-700/30 transition duration-150';
+        tr.innerHTML = `
+          <td class="py-3 px-6"><span class="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">${item.cat}</span></td>
+          <td class="py-3 px-6 font-medium text-slate-200">${item.name}</td>
+          <td class="py-3 px-6 text-right font-bold text-white val-cell">₩0</td>
+          <td class="py-3 px-6 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <span class="text-xs text-indigo-300 w-8 text-right pct-cell">0.0%</span>
+              <div class="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-indigo-500 rounded-full" style="width: 0%; transition: width 1.5s cubic-bezier(0.34,1.56,0.64,1);"></div></div>
+            </div>
+          </td>
+        `;
+        assetTbody.appendChild(tr);
+        animateCounter(tr.querySelector('.val-cell'), item.val, 2000, formatKRW);
+        animateCounter(tr.querySelector('.pct-cell'), pct, 2000, null, false);
+        setTimeout(() => { tr.querySelector('.bg-indigo-500').style.width = pct + '%'; }, 100);
+      });
+      
+      debtItems.sort((a,b) => b.val - a.val).forEach(item => {
+        let pct = (item.val/data.asset.debt*100);
+        let tr = document.createElement('tr');
+        tr.className = 'hover:bg-rose-900/20 transition duration-150';
+        tr.innerHTML = `
+          <td class="py-3 px-6"><span class="px-2 py-1 bg-rose-900/50 text-rose-300 rounded text-xs">부채</span></td>
+          <td class="py-3 px-6 font-medium text-slate-200">${item.name}</td>
+          <td class="py-3 px-6 text-right font-bold text-white val-cell">₩0</td>
+          <td class="py-3 px-6 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <span class="text-xs text-rose-300 w-8 text-right pct-cell">0.0%</span>
+              <div class="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-rose-500 rounded-full" style="width: 0%; transition: width 1.5s cubic-bezier(0.34,1.56,0.64,1);"></div></div>
+            </div>
+          </td>
+        `;
+        debtTbody.appendChild(tr);
+        animateCounter(tr.querySelector('.val-cell'), item.val, 2000, formatKRW);
+        animateCounter(tr.querySelector('.pct-cell'), pct, 2000, null, false);
+        setTimeout(() => { tr.querySelector('.bg-rose-500').style.width = pct + '%'; }, 100);
+      });
+    }
+
+    
+    function updateKoreaClock() {
+      const now = new Date();
+      // 한국 표준시 (KST, UTC+9) 기준 포맷팅
+      const formatter = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      const parts = formatter.formatToParts(now);
+      let year, month, day, dayPeriod, hour, minute, second;
+      for (let p of parts) {
+        if (p.type === 'year') year = p.value;
+        if (p.type === 'month') month = p.value;
+        if (p.type === 'day') day = p.value;
+        if (p.type === 'dayPeriod') dayPeriod = p.value;
+        if (p.type === 'hour') hour = p.value;
+        if (p.type === 'minute') minute = p.value;
+        if (p.type === 'second') second = p.value;
+      }
+      // 2026-10-09 오전 00:00:00 형식 맞추기
+      const clockElement = document.getElementById('realtimeClock');
+      if (clockElement) {
+        clockElement.innerText = `${year}-${month}-${day} ${dayPeriod} ${hour}:${minute}:${second}`;
+      }
+    }
+    setInterval(updateKoreaClock, 1000);
+    document.addEventListener("DOMContentLoaded", updateKoreaClock);
+
+    document.addEventListener("DOMContentLoaded", renderUI);
+  </script>
+</body>
+</html>
